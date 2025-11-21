@@ -275,7 +275,7 @@ def standardize_range_of_application(text):
     if 'minorappliedcomputerscience' in app_lower:
         standardized_applications.append('Minor Applied Computer Science')
 
-    return '; '.join(sorted(list(standardized_applications)))
+    return ';'.join(sorted(list(standardized_applications)))
 
 def clean_semester(text):
     text_lower = str(text).lower()
