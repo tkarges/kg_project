@@ -80,14 +80,14 @@ class KnowledgeGraph:
 
         # Define Object Properties
         object_properties = [
-            has_level, has_prerequisite, offered_in, taught_by, has_person_in_charge,
+            has_level, offered_in, taught_by, has_person_in_charge,
             has_further_module, has_application_range
         ]
 
         for prop in object_properties:
             self.graph.add((prop, RDF.type, OWL.ObjectProperty))
 
-        self.graph.add((has_prerequisite, RDF.type, OWL.IrreflexiveProperty))
+        # self.graph.add((has_prerequisite, RDF.type, OWL.IrreflexiveProperty))
         self.graph.add((has_further_module, RDF.type, OWL.IrreflexiveProperty))
         self.graph.add((has_prerequisite, RDF.type, OWL.AsymmetricProperty))
         self.graph.add((has_further_module, RDF.type, OWL.AsymmetricProperty))
@@ -95,8 +95,8 @@ class KnowledgeGraph:
         self.graph.add((has_level, RDFS.domain, module))
         self.graph.add((has_level, RDFS.range, level))
 
-        self.graph.add((has_prerequisite, RDFS.domain, module))
-        self.graph.add((has_prerequisite, RDFS.range, module))
+        # self.graph.add((has_prerequisite, RDFS.domain, module))
+        # self.graph.add((has_prerequisite, RDFS.range, module))
 
         self.graph.add((offered_in, RDFS.domain, module))
         self.graph.add((offered_in, RDFS.range, offering_semester))
@@ -115,12 +115,15 @@ class KnowledgeGraph:
 
         # Define Datatype Properties
         datatype_properties = [
-            has_module_id, has_module_name, has_type, has_ects, has_aim, has_literature, has_assessment_form,
+            has_prerequisite, has_module_id, has_module_name, has_type, has_ects, has_aim, has_literature, has_assessment_form,
             has_admission_requirements, has_assessment_duration, has_language, recommended_semester
         ]
 
         for prop in datatype_properties:
             self.graph.add((prop, RDF.type, OWL.DatatypeProperty))
+
+        self.graph.add((has_prerequisite, RDFS.domain, module))
+        self.graph.add((has_prerequisite, RDFS.range, XSD.string))
 
         self.graph.add((has_module_id, RDFS.domain, module))
         self.graph.add((has_module_id, RDFS.range, XSD.string))
@@ -203,14 +206,15 @@ class KnowledgeGraph:
             handle_none_literals(row['module_id'], EX.hasLiterature, row['literature'], datatype=XSD.string)
             handle_none_literals(row['module_id'], EX.hasAssessmentForm, row['assessment_form'], datatype=XSD.string)
             handle_none_literals(row['module_id'], EX.hasAdmissionRequirements, row['admission_requirements'], datatype=XSD.string)
-            handle_none_literals(row['module_id'], EX.hasAssessmentDuration, row['assessment_duration'], datatype=XSD.integer)
+            handle_none_literals(row['module_id'], EX.hasAssessmentDuration, row['assessment_duration'], datatype=XSD.string)
             handle_none_literals(row['module_id'], EX.hasLanguage, row['language'], datatype=XSD.string)
+            handle_none_literals(row['module_id'], EX.hasPrerequisite, row['prerequisites'], datatype=XSD.string)
             handle_multiple_literals(row['module_id'], EX.recommendedSemester, row['recommended_semester'], datatype=XSD.integer)
+            
 
             # object properties
             handle_none_values(row['module_id'], EX.hasLevel, row['level'])
             handle_none_values(row['module_id'], EX.offeredIn, row['offering'])
-            handle_multiple_values(row['module_id'], EX.hasPrerequisite, row['prerequisites'], 'prerequisites')
             handle_multiple_values(row['module_id'], EX.hasFurtherModule, row['further_module'], 'further_module')
             handle_multiple_values(row['module_id'], EX.hasApplicationRange, row['application_range'], 'application_range')
             handle_multiple_values(row['module_id'], EX.taughtBy, row['lecturer'], 'lecturer')
