@@ -34,7 +34,12 @@ def clean_main():
 # Concatenate all dataframes into a single df_modules
     
 
-    for df in dfs:
+    for i, df in enumerate(dfs):
+        #df['moduleno'] = df['moduleno'].astype(str)
+        #df['moduleno'] = df['moduleno'].apply(remove_whitespaces)
+        #df['lecturer'] = df['lecturer'].apply(remove_whitespaces)
+        #df['range_of_application'] = df['range_of_application'].apply(remove_whitespaces)
+        
         df['type_of_module'] = df['type_of_module'].apply(clean_type_of_module)
         df['form_of_module'] = df['form_of_module'].apply(clean_form_of_module)
         df['level'] = df['level'].apply(clean_level)
@@ -46,20 +51,30 @@ def clean_main():
         df = clean_further(df)
         df['range_of_application'] = df['range_of_application'].apply(standardize_range_of_application)
         df['semester'] = df['semester'].apply(clean_semester)
+        for col in df.columns:
+            df[col] = df[col].apply(process_string)
 
-        df.rename(columns={
-            "moduleno": "module_id",
-            "name": "module_name",
-            "type_of_module": "type",
-            "form_of_assessment": "assessment_form",
-            "admission_requirements_for_assessment": "admission_requirements",
-            "semester": "recommended_semester"
-        }
+        df = df.rename(
+            columns={
+                "moduleno": "module_id",
+                "name": "module_name",
+                "type_of_module": "type",
+                "form_of_assessment": "assessment_form",
+                "admission_requirements_for_assessment": "admission_requirements",
+                "semester": "recommended_semester",
+                "aim_of_module": "aim",
+                "duration_of_assessment": "assessment_duration" ,
+                "range_of_application": "application_range"
+            }
         )
+
+        dfs[i] = df
 
     #df_modules = pd.concat(dfs, ignore_index=True)
     return dfs
 
+def process_string(title):
+    return str(title).replace(' ', '[WS]').replace('\n', '').replace('-', '')
 
 def clean_form_of_module(text):
     text_lower = str(text).lower()
@@ -239,24 +254,25 @@ def clean_further(df):
 def standardize_range_of_application(text):
     standardized_applications = []
     #for app in applications_list:
-    app_lower = str(text).lower()
-    if 'mmds' in app_lower or 'mannheim master in data science' in app_lower:
+    app_lower = str(text).lower().replace('\n', '').replace('-', '').replace(' ', '')
+    #print(app_lower)
+    if 'mmds' in app_lower or 'mannheimmasterindatascience' in app_lower:
         standardized_applications.append('M.Sc. Mannheim Master in Data Science')
-    if 'mmsds' in app_lower or 'mannheim master in social data science' in app_lower:
+    if 'mmsds' in app_lower or 'mannheimmasterinsocialdatascience' in app_lower:
         standardized_applications.append('M.Sc. Mannheim Master in Social Data Science')
-    if 'm.sc. wirtschaftsinformatik' in app_lower or 'm.sc. business informatics' in app_lower:
+    if 'm.sc.wirtschaftsinformatik' in app_lower or 'm.sc.businessinformatics' in app_lower:
         standardized_applications.append('M.Sc. Wirtschaftsinformatik')
-    if 'b.sc. wirtschaftsinformatik' in app_lower:
+    if 'b.sc.wirtschaftsinformatik' in app_lower:
         standardized_applications.append('B.Sc. Wirtschaftsinformatik')
-    if 'lehramt informatik' in app_lower:
+    if 'lehramtinformatik' in app_lower:
         standardized_applications.append('Lehramt Informatik')
-    if 'm.sc. mathematik' in app_lower:
+    if 'm.sc.mathematik' in app_lower:
         standardized_applications.append('M.Sc. Mathematik')
-    if 'm.sc. wirtschaftsmathematik' in app_lower:
+    if 'm.sc.wirtschaftsmathematik' in app_lower:
         standardized_applications.append('M.Sc. Wirtschaftsmathematik')
-    if 'm.sc. wirtschaftspädagogik' in app_lower:
+    if 'm.sc.wirtschaftspädagogik' in app_lower:
         standardized_applications.append('M.Sc. Wirtschaftspädagogik')
-    if 'minor applied computer science' in app_lower:
+    if 'minorappliedcomputerscience' in app_lower:
         standardized_applications.append('Minor Applied Computer Science')
 
     return '; '.join(sorted(list(standardized_applications)))
@@ -276,11 +292,3 @@ def clean_semester(text):
         return '; '.join(sorted(list(found_sems)))
     else:
         return text_lower
-    
-#pd.set_option('display.max_columns', None)
-#pd.set_option('display.width', 1000)
-df = clean_main()[0]
-for column in df.columns:
-    print(df[column].head())
-
-

@@ -3,6 +3,7 @@ from rdflib import Graph, URIRef, Literal, BNode, Namespace
 from rdflib.namespace import OWL, RDF, RDFS, XSD, FOAF
 from rdflib.collection import Collection
 import numpy as np
+import clean_pipeline
 
 class KnowledgeGraph:
     def __init__(self, data: pd.DataFrame):
@@ -150,13 +151,13 @@ class KnowledgeGraph:
         self.graph.add((has_admission_requirements, RDFS.range, XSD.string))
 
         self.graph.add((has_assessment_duration, RDFS.domain, module))
-        self.graph.add((has_assessment_duration, RDFS.range, XSD.integer))
+        self.graph.add((has_assessment_duration, RDFS.range, XSD.string))
 
         self.graph.add((has_language, RDFS.domain, module))
         self.graph.add((has_language, RDFS.range, XSD.string))
 
         self.graph.add((recommended_semester, RDFS.domain, module))
-        self.graph.add((recommended_semester, RDFS.range, XSD.integer))
+        self.graph.add((recommended_semester, RDFS.range, XSD.string))
 
     def _extract_data(self):
         """
@@ -170,7 +171,7 @@ class KnowledgeGraph:
             "lecturer": EX.Lecturer,
             "offering": EX.OfferingSemester,
             "prerequisites": EX.Module,
-            "further_module": EX.Module,
+            "further_modules": EX.Module,
             "application_range": EX.StudyProgram,
             "person_in_charge": FOAF.Person
         }
@@ -185,9 +186,13 @@ class KnowledgeGraph:
 
         def handle_multiple_values(sub, rel, obj, type):
             if pd.notna(sub) and pd.notna(obj):
-                for item in str(obj).split(';'):
-                    self.graph.add((IN[item.strip()], RDF.type, classes_dict[type]))
-                    self.graph.add((IN[sub], rel, IN[item.strip()]))
+                for raw_item in str(obj).split(';'):
+                    item = raw_item.strip()
+                    if not item:
+                        continue 
+                    self.graph.add((IN[item], RDF.type, classes_dict[type]))
+                    self.graph.add((IN[sub], rel, IN[item]))
+
         
         def handle_multiple_literals(sub, rel, obj, datatype):
             if pd.notna(sub) and pd.notna(obj):
@@ -209,18 +214,19 @@ class KnowledgeGraph:
             handle_none_literals(row['module_id'], EX.hasAssessmentDuration, row['assessment_duration'], datatype=XSD.string)
             handle_none_literals(row['module_id'], EX.hasLanguage, row['language'], datatype=XSD.string)
             handle_none_literals(row['module_id'], EX.hasPrerequisite, row['prerequisites'], datatype=XSD.string)
-            handle_multiple_literals(row['module_id'], EX.recommendedSemester, row['recommended_semester'], datatype=XSD.integer)
+            handle_multiple_literals(row['module_id'], EX.recommendedSemester, row['recommended_semester'], datatype=XSD.string)
             
 
             # object properties
             handle_none_values(row['module_id'], EX.hasLevel, row['level'])
             handle_none_values(row['module_id'], EX.offeredIn, row['offering'])
-            handle_multiple_values(row['module_id'], EX.hasFurtherModule, row['further_module'], 'further_module')
+            handle_multiple_values(row['module_id'], EX.hasFurtherModule, row['further_modules'], 'further_modules')
             handle_multiple_values(row['module_id'], EX.hasApplicationRange, row['application_range'], 'application_range')
             handle_multiple_values(row['module_id'], EX.taughtBy, row['lecturer'], 'lecturer')
             handle_multiple_values(row['module_id'], EX.hasPersonInCharge, row['person_in_charge'], 'person_in_charge')
 
 if __name__ == "__main__":
+    '''
     data = {
         'module_id': ['CS101', 'CS102', 'DS500'],
         'module_name': ['Introduction to Programming', 'Data Structures and Algorithms', 'Machine Learning'],
@@ -241,8 +247,47 @@ if __name__ == "__main__":
         'lecturer': ['Prof_Smith', 'Prof_Doe', 'Prof_AI;Dr_New'],
         'person_in_charge': ['Prof_Smith', 'Prof_Doe', 'Prof_AI']
     }
-    kg_instance = KnowledgeGraph(pd.DataFrame(data))
+    '''
+    #dfs = clean_pipeline.clean_main()
+    #all_modules = pd.concat(dfs, ignore_index=True)
+    #results = all_modules.drop_duplicates(subset='module_id', keep='first')
+
+    dfs = clean_pipeline.clean_main()
+    all_modules = pd.concat(dfs, ignore_index=True)
+
+    def merge_semicolon(col):
+        vals = []
+        for v in col.dropna():
+            vals.extend(str(v).split(';'))
+        # unique, stripped, joined back
+        return ';'.join(sorted(set(x.strip() for x in vals if x.strip())))
+
+    results = (
+        all_modules
+        .groupby("module_id", as_index=False)
+        .agg({
+            "module_name": "first",
+            "type": "first",
+            "ects": "first",
+            "aim": "first",
+            "literature": "first",
+            "assessment_form": "first",
+            "admission_requirements": "first",
+            "assessment_duration": "first",
+            "language": "first",
+            "recommended_semester": "first",
+            "level": "first",
+            "offering": "first",
+            "prerequisites": "first",
+            "further_modules": "first",
+            "application_range": merge_semicolon,  # 👈 merge here
+            "lecturer": "first",
+            "person_in_charge": "first",
+        })
+    )
+
+    kg_instance = KnowledgeGraph(pd.DataFrame(results))
     
     my_graph = kg_instance.graph
 
-    print(my_graph.serialize(format="turtle"))
+    my_graph.serialize(destination='module_graph.ttl', format='turtle')

@@ -6,7 +6,7 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import fitz  # PyMuPDF
+import fitz
 import camelot
 import pandas as pd
 
@@ -155,7 +155,6 @@ def debug_headings_for_one_module(descriptions: dict):
                 if line not in seen:
                     print("HEADING:", repr(line), "→", NORMALIZED_SECTION_KEYS[norm])
                     seen.add(line)
-        break
 
 def normalize_code(code: str) -> str:
     return re.sub(r"\s+", " ", code.strip())
@@ -569,8 +568,8 @@ def catalog_to_json(
         json.dump(plain, f, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
-    pdf = Path("data/module_catalogs/wima_master.pdf")
-    out = Path("data/preprocessed/wima_master.json")
+    pdf = Path("data/module_catalogs/mmds.pdf")
+    out = Path("data/preprocessed/test.json")
 
     overview_pages = ""
 
