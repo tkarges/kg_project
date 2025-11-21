@@ -29,14 +29,26 @@ export default function KnowledgeGraphQuery() {
   const [object, setObject] = useState("")
   const [results, setResults] = useState<Array<Record<string, string>>>([])
 
-  const handleRunQuery = () => {
-    // Placeholder for backend SPARQL query
-    // For demonstration, showing mock results
-    setResults([
-      { subject: "Machine Learning", description: "A subset of artificial intelligence" },
-      { subject: "Data Mining", description: "The process of discovering patterns in large data sets" },
-    ])
-  }
+  const handleRunQuery = async () => {
+    try {
+      const res = await fetch("/api/query_execution", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          subject,
+        })
+      });
+      if (!res.ok) {
+        throw new Error(`Backend error: ${res.statusText}`);
+      }
+      const data = await res.json();
+      setResults(data);
+    } catch(err: any) {
+      console.error(err);
+    } 
+  };
 
   return (
     <div className={`min-h-screen p-8 ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
