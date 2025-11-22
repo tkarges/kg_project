@@ -40,12 +40,12 @@ const OBJECT_OPTIONS: Record<string, { value: string; label: string }[]> = {
     { value: "12", label: "12 ECTS" },
   ],
   level: [
-    { value: "bachelor", label: "Bachelor" },
-    { value: "master", label: "Master" },
+    { value: "Bachelor", label: "Bachelor" },
+    { value: "Master", label: "Master" },
   ],
   lecturer: [
-    { value: "gemulla", label: "Prof. Dr. Rainer Gemulla" },
-    { value: "hertling", label: "Dr. Sven Hertling" },
+    { value: "Prof.[WS]Dr.[WS]Rainer[WS]Gemulla", label: "Prof. Dr. Rainer Gemulla" },
+    { value: "Dr.[WS]Sven[WS]Hertling", label: "Dr. Sven Hertling" },
   ],
 };
 
