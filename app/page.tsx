@@ -31,7 +31,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 
 const OBJECT_OPTIONS: Record<string, { value: string; label: string }[]> = {
-  ects: [
+  hasECTS: [
     { value: "3", label: "3 ECTS" },
     { value: "4", label: "4 ECTS" },
     { value: "6", label: "6 ECTS" },
@@ -39,11 +39,11 @@ const OBJECT_OPTIONS: Record<string, { value: string; label: string }[]> = {
     { value: "9", label: "9 ECTS" },
     { value: "12", label: "12 ECTS" },
   ],
-  level: [
+  hasLevel: [
     { value: "Bachelor", label: "Bachelor" },
     { value: "Master", label: "Master" },
   ],
-  lecturer: [
+  taughtBy: [
     { value: "Prof.[WS]Dr.[WS]Rainer[WS]Gemulla", label: "Prof. Dr. Rainer Gemulla" },
     { value: "Dr.[WS]Sven[WS]Hertling", label: "Dr. Sven Hertling" },
   ],
@@ -85,6 +85,8 @@ export default function KnowledgeGraphQuery() {
 
   const handleFilterQuery = async () => {
     try {
+      console.log("Calling /api/module_filter with", { relation, object });
+
       const res = await fetch("/api/module_filter", {
         method: "POST",
         headers: {
@@ -94,17 +96,23 @@ export default function KnowledgeGraphQuery() {
           subject,
           object,
           relation,
-        })
+        }),
       });
-      if (!res.ok) {
-        throw new Error(`Backend error: ${res.statusText}`);
-      }
+
       const data = await res.json();
+      console.log("Response from backend:", res.status, data);
+
+      if (!res.ok) {
+        throw new Error(data.error || `Backend error: ${res.statusText}`);
+      }
+
       setResults(data);
     } catch (err: any) {
-      console.error(err);
+      console.error("Filter query failed:", err);
+      // temporary: make it visible
+      alert(err.message ?? "Unknown error");
     }
-  }
+  };
 
   return (
     <div className={`min-h-screen p-8 ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
@@ -334,9 +342,9 @@ export default function KnowledgeGraphQuery() {
                       <SelectValue placeholder="Select relation..." />
                     </SelectTrigger>
                     <SelectContent className={darkMode ? "bg-slate-700 border-slate-600" : ""}>
-                      <SelectItem value="ects">ECTS</SelectItem>
-                      <SelectItem value="level">Level</SelectItem>
-                      <SelectItem value="lecturer">Lecturer</SelectItem>
+                      <SelectItem value="hasECTS">ECTS</SelectItem>
+                      <SelectItem value="hasLevel">Level</SelectItem>
+                      <SelectItem value="taughtBy">Lecturer</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

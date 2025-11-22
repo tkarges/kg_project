@@ -38,7 +38,7 @@ def run_query(relation: str, obj: str):
         }}
     '''
 
-    result = graph.query(query, initBindings={'var': parse_object_term(relation, obj)})
+    result = graph.query(query, initBindings={'query_input': parse_object_term(relation, obj)})
     cleaned_results = []
     for row in result:
         name = str(row["module_name"]).replace("[WS]", " ")
