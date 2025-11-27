@@ -29,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import Image from "next/image"
 
 const OBJECT_OPTIONS: Record<string, { value: string; label: string }[]> = {
   hasECTS: [
@@ -49,12 +50,60 @@ const OBJECT_OPTIONS: Record<string, { value: string; label: string }[]> = {
   ],
 };
 
+export const RELATION_OPTIONS: Record<
+  string,
+  { value: string; label: string }
+> = {
+  hasECTS: {
+    value: "hasECTS",
+    label: "ECTS",
+  },
+  hasLevel: {
+    value: "hasLevel",
+    label: "Level",
+  },
+  taughtBy: {
+    value: "taughtBy",
+    label: "Lecturer",
+  },
+  hasType: {
+    value: "hasType",
+    label: "Type",
+  },
+  offeredIn: {
+    value: "offeredIn",
+    label: "Offering",
+  },
+  hasLanguage: {
+    value: "hasLanguage",
+    label: "Language",
+  },
+};
+
+type ModuleItem = {
+  subject: string;
+  description?: string;
+};
+
+type ModuleFilterResponse = {
+  results: ModuleItem[];
+};
+
+type RelationRangeItem = {
+  module_name: string;
+};
+
+type RelationRangeResponse = {
+  results: RelationRangeItem[];
+};
+
 export default function KnowledgeGraphQuery() {
   const [darkMode, setDarkMode] = useState(false);
   const [subject, setSubject] = useState("");
   const [relation, setRelation] = useState("");
   const [object, setObject] = useState("");
   const [results, setResults] = useState<Array<Record<string, string>>>([]);
+  const [objectRelationRange, setObjectRelationRange] = useState<RelationRangeItem[]>([]);
   const [selectedTab, setSelectedTab] = useState<string>("programs");
   const [subjectDisplay, setSubjectDisplay] = useState<string>();
 
@@ -64,20 +113,20 @@ export default function KnowledgeGraphQuery() {
 
   const handleModuleQuery = async () => {
     try {
-      const res = await fetch("/api/query_execution", {
+      const res = await fetch("https://kgbackend.vercel.app/api/module-filter/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          subject,
+          "module": subject,
         })
       });
       if (!res.ok) {
         throw new Error(`Backend error: ${res.statusText}`);
       }
-      const data = await res.json();
-      setResults(data);
+      const data: ModuleFilterResponse = await res.json();
+      setResults(data.results);
     } catch (err: any) {
       console.error(err);
     }
@@ -85,17 +134,16 @@ export default function KnowledgeGraphQuery() {
 
   const handleFilterQuery = async () => {
     try {
-      console.log("Calling /api/module_filter with", { relation, object });
+      console.log("Calling /api/object-relation with", { relation, object });
 
-      const res = await fetch("/api/module_filter", {
+      const res = await fetch("https://kgbackend.vercel.app/api/object-relation", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          subject,
-          object,
-          relation,
+          'obj': object,
+          'relation': relation,
         }),
       });
 
@@ -103,10 +151,10 @@ export default function KnowledgeGraphQuery() {
       console.log("Response from backend:", res.status, data);
 
       if (!res.ok) {
-        throw new Error(data.error || `Backend error: ${res.statusText}`);
+        throw new Error(`Backend error: ${res.statusText}`);
       }
 
-      setResults(data);
+      setResults(data.results);
     } catch (err: any) {
       console.error("Filter query failed:", err);
       // temporary: make it visible
@@ -114,26 +162,93 @@ export default function KnowledgeGraphQuery() {
     }
   };
 
+  const getRelationRange = async (relation: string) => {
+    try {
+      setRelation(relation)
+      console.log("Calling api/object-relation/relation-ranges with", { relation });
+
+      const res = await fetch("https://kgbackend.vercel.app/api/object-relation/relation-ranges", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          'relation': relation,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Backend error: ${res.statusText}`);
+      }
+
+      const data: RelationRangeResponse = await res.json();
+      setObjectRelationRange(data.results);
+      console.log("Response from backend:", res.status, data);
+
+    } catch (err: any) {
+      console.error("Filter query failed:", err);
+      alert(err.message ?? "Unknown error");
+    }
+  };
+
   return (
-    <div className={`min-h-screen p-8 ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
-      <div className="mx-auto max-w-6xl">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div className="flex-1" />
-          <h1 className={`text-3xl font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-            Knowledge Graph Query Interface
-          </h1>
-          <div className="flex-1 flex justify-end">
+    <div
+      className={`min-h-screen px-6 py-10 transition-colors duration-300 ${darkMode ? "bg-slate-950" : "bg-white"
+        }`}
+    >
+      <div className="mx-auto max-w-7xl">
+        {/* Top area: logo left, title center, toggle right */}
+        <header className="relative flex items-center justify-center mb-12">
+
+          {/* LEFT: Large Logo */}
+          <div className="absolute left-0 flex items-center">
+            <Image
+              src="/logo.png"
+              alt="Logo"
+              width={300}
+              height={300}
+              className="rounded-xl shadow-sm"
+              priority
+            />
+          </div>
+
+          {/* CENTER: Title */}
+          <div className="text-center px-4">
+            <h1
+              className={`text-4xl sm:text-5xl font-bold tracking-tight ${darkMode ? "text-white" : "text-slate-900"
+                }`}
+            >
+              Module Catalogues
+            </h1>
+            <p
+              className={`mt-3 text-lg ${darkMode ? "text-slate-300" : "text-slate-600"
+                }`}
+            >
+              Faculty of Business Informatics & Mathematics
+            </p>
+          </div>
+
+          {/* RIGHT: Dark Mode Toggle */}
+          <div className="absolute right-0">
             <Button
               variant="outline"
               size="icon"
               onClick={() => setDarkMode(!darkMode)}
-              className={darkMode ? 'border-slate-700 hover:bg-slate-800' : ''}
+              className={`h-12 w-12 rounded-full transition ${darkMode
+                ? "border-slate-700 bg-slate-900 hover:bg-slate-800"
+                : "border-slate-300 bg-white hover:bg-slate-100 opacity-0"
+                }`}
+              aria-label="Toggle dark mode"
             >
-              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              {darkMode ? (
+                <Sun className="h-6 w-6" />
+              ) : (
+                <Moon className="h-6 w-6" />
+              )}
             </Button>
           </div>
-        </div>
+        </header>
+
         <div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -146,7 +261,7 @@ export default function KnowledgeGraphQuery() {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => {
-                  setSelectedTab("programs")
+                  setSelectedTab("programs");
                 }}
               >
                 Available Modules for Study Programs
@@ -169,398 +284,412 @@ export default function KnowledgeGraphQuery() {
           </DropdownMenu>
         </div>
         {/* Main Query Card */}
-        {selectedTab === "programs" && (
-          <Card className={`shadow-lg ${darkMode ? "bg-slate-800 border-slate-700" : ""}`}>
-            <CardHeader className="flex flex-row items-center justify-between gap-4">
-              <div>
+        {
+          selectedTab === "programs" && (
+            <Card className={`shadow-lg ${darkMode ? "bg-slate-800 border-slate-700" : ""}`}>
+              <CardHeader className="flex flex-row items-center justify-between gap-4">
+                <div>
+                  <h2 className={`text-xl font-semibold ${darkMode ? "text-white" : "text-slate-900"}`}>
+                    Available Modules by Study Program
+                  </h2>
+                  <p className={`${darkMode ? "text-slate-300" : "text-slate-600"} text-sm`}>
+                    Choose a study program and run the query to see its modules.
+                  </p>
+                </div>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={`${darkMode ? "border-slate-700 text-slate-100" : ""} w-fit`}
+                    >
+                      {subjectDisplay || "Select Study Program"}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className={darkMode ? "bg-slate-800 border-slate-700" : ""}
+                  >
+                    <DropdownMenuLabel>Selection of Study Programs</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSubject("M.Sc.[WS]Mannheim[WS]Master[WS]in[WS]Data[WS]Science");
+                        setSubjectDisplay("MMDS");
+                      }}
+                    >
+                      MMDS
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSubject("B.Sc.[WS]Wirtschaftsinformatik");
+                        setSubjectDisplay("B.Sc. Business Informatics");
+                      }}
+                    >
+                      B.Sc. Business Informatics
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSubject("M.Sc.[WS]Wirtschaftsinformatik");
+                        setSubjectDisplay("M.Sc. Business Informatics");
+                      }}
+                    >
+                      M.Sc. Business Informatics
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSubject("B.Sc.[WS]Wirtschaftsmathematik");
+                        setSubjectDisplay("B.Sc. Mathematics in Business and Economics");
+                      }}
+                    >
+                      B.Sc. Mathematics in Business and Economics
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSubject("M.Sc.[WS]Wirtschaftsinformatik");
+                        setSubjectDisplay("M.Sc. Mathematics in Business and Economics");
+                      }}
+                    >
+                      M.Sc. Mathematics in Business and Economics
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                {subjectDisplay && (
+                  <div className={darkMode ? "text-slate-200" : "text-slate-800"}>
+                    <span className="text-sm text-slate-500">Selected program:</span>{" "}
+                    <span className="font-semibold">{subjectDisplay}</span>
+                  </div>
+                )}
+
+                <Button
+                  className="w-fit bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={handleModuleQuery}
+                  disabled={!subject}
+                >
+                  Show Available Modules
+                </Button>
+
+                <div
+                  className={`rounded-lg border overflow-hidden ${darkMode ? "border-slate-700" : "border-slate-200"
+                    }`}
+                >
+                  <Table>
+                    <TableHeader>
+                      <TableRow
+                        className={
+                          darkMode
+                            ? "bg-slate-700 hover:bg-slate-700 border-slate-600"
+                            : "bg-slate-100 hover:bg-slate-100"
+                        }
+                      >
+                        <TableHead
+                          className={`font-semibold text-base h-14 ${darkMode ? "text-white" : "text-slate-900"
+                            }`}
+                        >
+                          Module Name
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {results.length > 0 ? (
+                        results.map((row, index) => (
+                          <TableRow
+                            key={index}
+                            className={`h-16 ${darkMode ? "border-slate-700" : ""}`}
+                          >
+                            <TableCell
+                              className={`text-base ${darkMode ? "text-slate-100" : "text-slate-900"
+                                }`}
+                            >
+                              {row.module_name}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow className={darkMode ? "border-slate-700" : ""}>
+                          <TableCell
+                            colSpan={1}
+                            className={`text-center h-32 ${darkMode ? "text-slate-400" : "text-slate-500"
+                              }`}
+                          >
+                            No results yet. Choose a program and run the query to see modules.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        }
+        {
+          selectedTab === "modules" && (
+            <Card className={`shadow-lg mt-6 ${darkMode ? "bg-slate-800 border-slate-700" : ""}`}>
+              <CardHeader>
                 <h2 className={`text-xl font-semibold ${darkMode ? "text-white" : "text-slate-900"}`}>
-                  Available Modules by Study Program
+                  Find Modules by Relation & Object
                 </h2>
                 <p className={`${darkMode ? "text-slate-300" : "text-slate-600"} text-sm`}>
-                  Choose a study program and run the query to see its modules.
+                  Choose a relation and an object to retrieve suitable modules from the knowledge graph.
                 </p>
-              </div>
+              </CardHeader>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={`${darkMode ? "border-slate-700 text-slate-100" : ""} w-fit`}
-                  >
-                    {subjectDisplay || "Select Study Program"}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className={darkMode ? "bg-slate-800 border-slate-700" : ""}
-                >
-                  <DropdownMenuLabel>Selection of Study Programs</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setSubject("M.Sc.[WS]Mannheim[WS]Master[WS]in[WS]Data[WS]Science");
-                      setSubjectDisplay("MMDS");
-                    }}
-                  >
-                    MMDS
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setSubject("B.Sc.[WS]Wirtschaftsinformatik");
-                      setSubjectDisplay("B.Sc. Business Informatics");
-                    }}
-                  >
-                    B.Sc. Business Informatics
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setSubject("M.Sc.[WS]Wirtschaftsinformatik");
-                      setSubjectDisplay("M.Sc. Business Informatics");
-                    }}
-                  >
-                    M.Sc. Business Informatics
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setSubject("B.Sc.[WS]Wirtschaftsmathematik");
-                      setSubjectDisplay("B.Sc. Mathematics in Business and Economics");
-                    }}
-                  >
-                    B.Sc. Mathematics in Business and Economics
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setSubject("M.Sc.[WS]Wirtschaftsinformatik");
-                      setSubjectDisplay("M.Sc. Mathematics in Business and Economics");
-                    }}
-                  >
-                    M.Sc. Mathematics in Business and Economics
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Relation & Object dropdowns */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            <CardContent className="space-y-6">
-              {subjectDisplay && (
-                <div className={darkMode ? "text-slate-200" : "text-slate-800"}>
-                  <span className="text-sm text-slate-500">Selected program:</span>{" "}
-                  <span className="font-semibold">{subjectDisplay}</span>
-                </div>
-              )}
-
-              <Button
-                className="w-fit bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={handleModuleQuery}
-                disabled={!subject}
-              >
-                Show Available Modules
-              </Button>
-
-              <div
-                className={`rounded-lg border overflow-hidden ${darkMode ? "border-slate-700" : "border-slate-200"
-                  }`}
-              >
-                <Table>
-                  <TableHeader>
-                    <TableRow
-                      className={
-                        darkMode
-                          ? "bg-slate-700 hover:bg-slate-700 border-slate-600"
-                          : "bg-slate-100 hover:bg-slate-100"
-                      }
+                  {/* Relation dropdown */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="relation-select"
+                      className={`text-lg font-semibold ${darkMode ? "text-white" : "text-slate-900"}`}
                     >
-                      <TableHead
-                        className={`font-semibold text-base h-14 ${darkMode ? "text-white" : "text-slate-900"
+                      Relation
+                    </Label>
+
+                    <Select value={relation} onValueChange={(value) => {
+                      getRelationRange(value);
+                    }}>
+                      <SelectTrigger
+                        id="relation-select"
+                        className={`h-12 w-full ${darkMode ? "bg-slate-700 border-slate-600 text-white" : ""
                           }`}
                       >
-                        Module Name
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.length > 0 ? (
-                      results.map((row, index) => (
-                        <TableRow
-                          key={index}
-                          className={`h-16 ${darkMode ? "border-slate-700" : ""}`}
-                        >
-                          <TableCell
-                            className={`text-base ${darkMode ? "text-slate-100" : "text-slate-900"
-                              }`}
-                          >
-                            {row.subject}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow className={darkMode ? "border-slate-700" : ""}>
-                        <TableCell
-                          colSpan={1}
-                          className={`text-center h-32 ${darkMode ? "text-slate-400" : "text-slate-500"
-                            }`}
-                        >
-                          No results yet. Choose a program and run the query to see modules.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        {selectedTab === "modules" && (
-          <Card className={`shadow-lg mt-6 ${darkMode ? "bg-slate-800 border-slate-700" : ""}`}>
-            <CardHeader>
-              <h2 className={`text-xl font-semibold ${darkMode ? "text-white" : "text-slate-900"}`}>
-                Find Modules by Relation & Object
-              </h2>
-              <p className={`${darkMode ? "text-slate-300" : "text-slate-600"} text-sm`}>
-                Choose a relation and an object to retrieve suitable modules from the knowledge graph.
-              </p>
-            </CardHeader>
+                        <SelectValue placeholder="Select relation..." />
+                      </SelectTrigger>
+                      <SelectContent className={darkMode ? "bg-slate-700 border-slate-600" : ""}>
+                        {Object.values(RELATION_OPTIONS).map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            <CardContent className="space-y-6">
-              {/* Relation & Object dropdowns */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                {/* Relation dropdown */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="relation-select"
-                    className={`text-lg font-semibold ${darkMode ? "text-white" : "text-slate-900"}`}
-                  >
-                    Relation
-                  </Label>
-
-                  <Select value={relation} onValueChange={setRelation}>
-                    <SelectTrigger
-                      id="relation-select"
-                      className={`h-12 w-full ${darkMode ? "bg-slate-700 border-slate-600 text-white" : ""
-                        }`}
+                  {/* Object dropdown */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="object-select"
+                      className={`text-lg font-semibold ${darkMode ? "text-white" : "text-slate-900"}`}
                     >
-                      <SelectValue placeholder="Select relation..." />
-                    </SelectTrigger>
-                    <SelectContent className={darkMode ? "bg-slate-700 border-slate-600" : ""}>
-                      <SelectItem value="hasECTS">ECTS</SelectItem>
-                      <SelectItem value="hasLevel">Level</SelectItem>
-                      <SelectItem value="taughtBy">Lecturer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                      Object
+                    </Label>
 
-                {/* Object dropdown */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="object-select"
-                    className={`text-lg font-semibold ${darkMode ? "text-white" : "text-slate-900"}`}
-                  >
-                    Object
-                  </Label>
-
-                  <Select
-                    value={object}
-                    onValueChange={setObject}
-                    disabled={!relation}
-                  >
-                    <SelectTrigger
-                      id="object-select"
-                      className={`h-12 w-full ${darkMode ? "bg-slate-700 border-slate-600 text-white" : ""
-                        } ${!relation ? "opacity-60 cursor-not-allowed" : ""}`}
+                    <Select
+                      value={object}
+                      onValueChange={setObject}
+                      disabled={!relation}
                     >
-                      <SelectValue
-                        placeholder={relation ? "Select object..." : "Select a relation first"}
-                      />
-                    </SelectTrigger>
-                    <SelectContent className={darkMode ? "bg-slate-700 border-slate-600" : ""}>
-                      {(OBJECT_OPTIONS[relation] ?? []).map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-              </div>
-              {/* Run query button */}
-              <Button
-                className="w-fit bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={handleFilterQuery}
-                disabled={!relation || !object}
-              >
-                Show Suitable Modules
-              </Button>
-
-              {/* Results table */}
-              <div
-                className={`rounded-lg border overflow-hidden ${darkMode ? "border-slate-700" : "border-slate-200"
-                  }`}
-              >
-                <Table>
-                  <TableHeader>
-                    <TableRow
-                      className={
-                        darkMode
-                          ? "bg-slate-700 hover:bg-slate-700 border-slate-600"
-                          : "bg-slate-100 hover:bg-slate-100"
-                      }
-                    >
-                      <TableHead
-                        className={`font-semibold text-base h-14 ${darkMode ? "text-white" : "text-slate-900"
-                          }`}
+                      <SelectTrigger
+                        id="object-select"
+                        className={`h-12 w-full ${darkMode ? "bg-slate-700 border-slate-600 text-white" : ""
+                          } ${!relation ? "opacity-60 cursor-not-allowed" : ""}`}
                       >
-                        Module Name
-                      </TableHead>
-                      <TableHead
-                        className={`font-semibold text-base h-14 ${darkMode ? "text-white" : "text-slate-900"
-                          }`}
-                      >
-                        Description
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.length > 0 ? (
-                      results.map((row, index) => (
-                        <TableRow
-                          key={index}
-                          className={`h-16 ${darkMode ? "border-slate-700" : ""}`}
-                        >
-                          <TableCell
-                            className={`text-base ${darkMode ? "text-slate-100" : "text-slate-900"
-                              }`}
-                          >
-                            {row.subject}
-                          </TableCell>
-                          <TableCell
-                            className={`text-base ${darkMode ? "text-slate-100" : "text-slate-900"
-                              }`}
-                          >
-                            {row.description}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow className={darkMode ? "border-slate-700" : ""}>
-                        <TableCell
-                          colSpan={2}
-                          className={`text-center h-32 ${darkMode ? "text-slate-400" : "text-slate-500"
-                            }`}
-                        >
-                          No results yet. Choose a relation and object, then run the query.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                        <SelectValue
+                          placeholder={relation ? "Select object..." : "Select a relation first"}
+                        />
+                      </SelectTrigger>
+                      <SelectContent className={darkMode ? "bg-slate-700 border-slate-600" : ""}>
+                        <SelectContent className={darkMode ? "bg-slate-700 border-slate-600" : ""}>
+                          {objectRelationRange
+                            .filter((row) => row.module_name && row.module_name.trim() !== "")
+                            .map((row) => (
+                              <SelectItem key={row.module_name} value={row.module_name}>
+                                {row.module_name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-        {selectedTab === 'main' && (
-          <Card className={`shadow-lg ${darkMode ? 'bg-slate-800 border-slate-700' : ''}`}>
-            <CardContent className="p-8">
-              {/* Query Input Fields */}
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3 mb-8">
-                {/* Subject Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="subject" className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Subject
-                  </Label>
-                  <Input
-                    id="subject"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    className={`h-12 ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : ''}`}
-                    placeholder="Enter subject..."
-                  />
                 </div>
-
-                {/* Relation Dropdown */}
-                <div className="space-y-2">
-                  <Label htmlFor="relation" className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Relation
-                  </Label>
-                  <Select value={relation} onValueChange={setRelation}>
-                    <SelectTrigger id="relation" className={`h-12 ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : ''}`}>
-                      <SelectValue placeholder="Select relation..." />
-                    </SelectTrigger>
-                    <SelectContent className={darkMode ? 'bg-slate-700 border-slate-600' : ''}>
-                      <SelectItem value="offering" className={darkMode ? 'text-white focus:bg-slate-600' : ''}>offering</SelectItem>
-                      <SelectItem value="required" className={darkMode ? 'text-white focus:bg-slate-600' : ''}>required</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Object Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="object" className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Object
-                  </Label>
-                  <Input
-                    id="object"
-                    value={object}
-                    onChange={(e) => setObject(e.target.value)}
-                    className={`h-12 ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : ''}`}
-                    placeholder="Enter object..."
-                  />
-                </div>
-              </div>
-
-              {/* Run Query Button */}
-              <div className="flex justify-center mb-8">
+                {/* Run query button */}
                 <Button
-                  onClick={handleModuleQuery}
-                  size="lg"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-12 h-12 text-base font-semibold"
+                  className="w-fit bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={handleFilterQuery}
+                  disabled={!relation || !object}
                 >
-                  Run Query
+                  Show Suitable Modules
                 </Button>
-              </div>
 
-              {/* Results Table */}
-              <div className={`rounded-lg border overflow-hidden ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
-                <Table>
-                  <TableHeader>
-                    <TableRow className={darkMode ? 'bg-slate-700 hover:bg-slate-700 border-slate-600' : 'bg-slate-100 hover:bg-slate-100'}>
-                      <TableHead className={`font-semibold text-base h-14 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                        Subject
-                      </TableHead>
-                      <TableHead className={`font-semibold text-base h-14 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                        Description
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.length > 0 ? (
-                      results.map((row, index) => (
-                        <TableRow key={index} className={`h-16 ${darkMode ? 'border-slate-700' : ''}`}>
-                          <TableCell className={`text-base ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-                            {row.subject}
-                          </TableCell>
-                          <TableCell className={`text-base ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-                            {row.description}
+                {/* Results table */}
+                <div
+                  className={`rounded-lg border overflow-hidden ${darkMode ? "border-slate-700" : "border-slate-200"
+                    }`}
+                >
+                  <Table>
+                    <TableHeader>
+                      <TableRow
+                        className={
+                          darkMode
+                            ? "bg-slate-700 hover:bg-slate-700 border-slate-600"
+                            : "bg-slate-100 hover:bg-slate-100"
+                        }
+                      >
+                        <TableHead
+                          className={`font-semibold text-base h-14 ${darkMode ? "text-white" : "text-slate-900"
+                            }`}
+                        >
+                          Module Name
+                        </TableHead>
+                        <TableHead
+                          className={`font-semibold text-base h-14 ${darkMode ? "text-white" : "text-slate-900"
+                            }`}
+                        >
+                          Description
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {results.length > 0 ? (
+                        results.map((row, index) => (
+                          <TableRow
+                            key={index}
+                            className={`h-16 ${darkMode ? "border-slate-700" : ""}`}
+                          >
+                            <TableCell
+                              className={`text-base ${darkMode ? "text-slate-100" : "text-slate-900"
+                                }`}
+                            >
+                              {row.module_name}
+                            </TableCell>
+                            <TableCell
+                              className={`text-base ${darkMode ? "text-slate-100" : "text-slate-900"
+                                }`}
+                            >
+                              {row.description}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow className={darkMode ? "border-slate-700" : ""}>
+                          <TableCell
+                            colSpan={2}
+                            className={`text-center h-32 ${darkMode ? "text-slate-400" : "text-slate-500"
+                              }`}
+                          >
+                            No results yet. Choose a relation and object, then run the query.
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow className={darkMode ? 'border-slate-700' : ''}>
-                        <TableCell
-                          colSpan={2}
-                          className={`text-center h-32 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}
-                        >
-                          No results yet. Run a query to see results.
-                        </TableCell>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        }
+
+        {
+          selectedTab === 'main' && (
+            <Card className={`shadow-lg ${darkMode ? 'bg-slate-800 border-slate-700' : ''}`}>
+              <CardContent className="p-8">
+                {/* Query Input Fields */}
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-3 mb-8">
+                  {/* Subject Field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="subject" className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                      Subject
+                    </Label>
+                    <Input
+                      id="subject"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      className={`h-12 ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : ''}`}
+                      placeholder="Enter subject..."
+                    />
+                  </div>
+
+                  {/* Relation Dropdown */}
+                  <div className="space-y-2">
+                    <Label htmlFor="relation" className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                      Relation
+                    </Label>
+                    <Select value={relation} onValueChange={setRelation}>
+                      <SelectTrigger id="relation" className={`h-12 ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : ''}`}>
+                        <SelectValue placeholder="Select relation..." />
+                      </SelectTrigger>
+                      <SelectContent className={darkMode ? 'bg-slate-700 border-slate-600' : ''}>
+                        <SelectItem value="offering" className={darkMode ? 'text-white focus:bg-slate-600' : ''}>offering</SelectItem>
+                        <SelectItem value="required" className={darkMode ? 'text-white focus:bg-slate-600' : ''}>required</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Object Field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="object" className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                      Object
+                    </Label>
+                    <Input
+                      id="object"
+                      value={object}
+                      onChange={(e) => setObject(e.target.value)}
+                      className={`h-12 ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : ''}`}
+                      placeholder="Enter object..."
+                    />
+                  </div>
+                </div>
+
+                {/* Run Query Button */}
+                <div className="flex justify-center mb-8">
+                  <Button
+                    onClick={handleModuleQuery}
+                    size="lg"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-12 h-12 text-base font-semibold"
+                  >
+                    Run Query
+                  </Button>
+                </div>
+
+                {/* Results Table */}
+                <div className={`rounded-lg border overflow-hidden ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className={darkMode ? 'bg-slate-700 hover:bg-slate-700 border-slate-600' : 'bg-slate-100 hover:bg-slate-100'}>
+                        <TableHead className={`font-semibold text-base h-14 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                          Subject
+                        </TableHead>
+                        <TableHead className={`font-semibold text-base h-14 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                          Description
+                        </TableHead>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>)}
-      </div>
+                    </TableHeader>
+                    <TableBody>
+                      {results.length > 0 ? (
+                        results.map((row, index) => (
+                          <TableRow key={index} className={`h-16 ${darkMode ? 'border-slate-700' : ''}`}>
+                            <TableCell className={`text-base ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                              {row.subject}
+                            </TableCell>
+                            <TableCell className={`text-base ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                              {row.description}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow className={darkMode ? 'border-slate-700' : ''}>
+                          <TableCell
+                            colSpan={2}
+                            className={`text-center h-32 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                          >
+                            No results yet. Run a query to see results.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>)
+        }
+      </div >
     </div>
   )
 }
