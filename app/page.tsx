@@ -31,25 +31,6 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import Image from "next/image"
 
-const OBJECT_OPTIONS: Record<string, { value: string; label: string }[]> = {
-  hasECTS: [
-    { value: "3", label: "3 ECTS" },
-    { value: "4", label: "4 ECTS" },
-    { value: "6", label: "6 ECTS" },
-    { value: "8", label: "8 ECTS" },
-    { value: "9", label: "9 ECTS" },
-    { value: "12", label: "12 ECTS" },
-  ],
-  hasLevel: [
-    { value: "Bachelor", label: "Bachelor" },
-    { value: "Master", label: "Master" },
-  ],
-  taughtBy: [
-    { value: "Prof.[WS]Dr.[WS]Rainer[WS]Gemulla", label: "Prof. Dr. Rainer Gemulla" },
-    { value: "Dr.[WS]Sven[WS]Hertling", label: "Dr. Sven Hertling" },
-  ],
-};
-
 export const RELATION_OPTIONS: Record<
   string,
   { value: string; label: string }
@@ -157,7 +138,6 @@ export default function KnowledgeGraphQuery() {
       setResults(data.results);
     } catch (err: any) {
       console.error("Filter query failed:", err);
-      // temporary: make it visible
       alert(err.message ?? "Unknown error");
     }
   };
@@ -197,22 +177,7 @@ export default function KnowledgeGraphQuery() {
         }`}
     >
       <div className="mx-auto max-w-7xl">
-        {/* Top area: logo left, title center, toggle right */}
         <header className="relative flex items-center justify-center mb-12">
-
-          {/* LEFT: Large Logo */}
-          <div className="absolute left-0 flex items-center">
-            <Image
-              src="/logo.png"
-              alt="Logo"
-              width={300}
-              height={300}
-              className="rounded-xl shadow-sm"
-              priority
-            />
-          </div>
-
-          {/* CENTER: Title */}
           <div className="text-center px-4">
             <h1
               className={`text-4xl sm:text-5xl font-bold tracking-tight ${darkMode ? "text-white" : "text-slate-900"
@@ -228,7 +193,7 @@ export default function KnowledgeGraphQuery() {
             </p>
           </div>
 
-          {/* RIGHT: Dark Mode Toggle */}
+          
           <div className="absolute right-0">
             <Button
               variant="outline"
@@ -283,7 +248,6 @@ export default function KnowledgeGraphQuery() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        {/* Main Query Card */}
         {
           selectedTab === "programs" && (
             <Card className={`shadow-lg ${darkMode ? "bg-slate-800 border-slate-700" : ""}`}>
@@ -439,10 +403,7 @@ export default function KnowledgeGraphQuery() {
               </CardHeader>
 
               <CardContent className="space-y-6">
-                {/* Relation & Object dropdowns */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                  {/* Relation dropdown */}
                   <div className="space-y-2">
                     <Label
                       htmlFor="relation-select"
@@ -509,7 +470,6 @@ export default function KnowledgeGraphQuery() {
                   </div>
 
                 </div>
-                {/* Run query button */}
                 <Button
                   className="w-fit bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={handleFilterQuery}
@@ -517,8 +477,6 @@ export default function KnowledgeGraphQuery() {
                 >
                   Show Suitable Modules
                 </Button>
-
-                {/* Results table */}
                 <div
                   className={`rounded-lg border overflow-hidden ${darkMode ? "border-slate-700" : "border-slate-200"
                     }`}
@@ -590,9 +548,7 @@ export default function KnowledgeGraphQuery() {
           selectedTab === 'main' && (
             <Card className={`shadow-lg ${darkMode ? 'bg-slate-800 border-slate-700' : ''}`}>
               <CardContent className="p-8">
-                {/* Query Input Fields */}
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3 mb-8">
-                  {/* Subject Field */}
                   <div className="space-y-2">
                     <Label htmlFor="subject" className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                       Subject
@@ -605,8 +561,6 @@ export default function KnowledgeGraphQuery() {
                       placeholder="Enter subject..."
                     />
                   </div>
-
-                  {/* Relation Dropdown */}
                   <div className="space-y-2">
                     <Label htmlFor="relation" className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                       Relation
@@ -622,7 +576,6 @@ export default function KnowledgeGraphQuery() {
                     </Select>
                   </div>
 
-                  {/* Object Field */}
                   <div className="space-y-2">
                     <Label htmlFor="object" className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                       Object
@@ -636,8 +589,6 @@ export default function KnowledgeGraphQuery() {
                     />
                   </div>
                 </div>
-
-                {/* Run Query Button */}
                 <div className="flex justify-center mb-8">
                   <Button
                     onClick={handleModuleQuery}
@@ -648,7 +599,6 @@ export default function KnowledgeGraphQuery() {
                   </Button>
                 </div>
 
-                {/* Results Table */}
                 <div className={`rounded-lg border overflow-hidden ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
                   <Table>
                     <TableHeader>
