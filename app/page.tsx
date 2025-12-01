@@ -78,6 +78,14 @@ type RelationRangeResponse = {
   results: RelationRangeItem[];
 };
 
+type ModuleDomainItem = {
+  module_name: string;
+}
+
+type ModuleDomainResponse = {
+  results: ModuleDomainItem[];
+}
+
 export default function KnowledgeGraphQuery() {
   const [darkMode, setDarkMode] = useState(false);
   const [subject, setSubject] = useState("");
@@ -87,6 +95,7 @@ export default function KnowledgeGraphQuery() {
   const [objectRelationRange, setObjectRelationRange] = useState<RelationRangeItem[]>([]);
   const [selectedTab, setSelectedTab] = useState<string>("programs");
   const [subjectDisplay, setSubjectDisplay] = useState<string>();
+  const [subjectModuleDomain, setSubjectModuleDomain] = useState<ModuleDomainItem[]>([]);
 
   useEffect(() => {
     setObject("");
@@ -142,6 +151,35 @@ export default function KnowledgeGraphQuery() {
     }
   };
 
+  const handlePropertyQuery = async () => {
+    try {
+      console.log("Calling /api/module-property with", { relation, subject });
+
+      const res = await fetch("https://kgbackend.vercel.app/api/module-property", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          'module':subject,
+          'relation': relation,
+        }),
+      });
+
+      const data = await res.json();
+      console.log("Response from backend:", res.status, data);
+
+      if (!res.ok) {
+        throw new Error(`Backend error: ${res.statusText}`);
+      }
+
+      setResults(data.results);
+    } catch (err: any) {
+      console.error("Filter query failed:", err);
+      alert(err.message ?? "Unknown error");
+    }
+  };
+
   const getRelationRange = async (relation: string) => {
     try {
       setRelation(relation)
@@ -163,6 +201,33 @@ export default function KnowledgeGraphQuery() {
 
       const data: RelationRangeResponse = await res.json();
       setObjectRelationRange(data.results);
+      console.log("Response from backend:", res.status, data);
+
+    } catch (err: any) {
+      console.error("Filter query failed:", err);
+      alert(err.message ?? "Unknown error");
+    }
+  };
+
+  const getModuleDomains = async () => {
+    try {
+      console.log("Calling api/module-property/module-domains with", {});
+
+      const res = await fetch("https://kgbackend.vercel.app/api/module-property/module-domains", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Backend error: ${res.statusText}`);
+      }
+
+      const data: ModuleDomainResponse = await res.json();
+      setSubjectModuleDomain(data.results);
       console.log("Response from backend:", res.status, data);
 
     } catch (err: any) {
@@ -240,17 +305,18 @@ export default function KnowledgeGraphQuery() {
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  setSelectedTab("main")
+                  setSelectedTab("main");
+                  getModuleDomains();
                 }}
               >
-                Main Menu (Original UI)
+                Module Property Filter
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
         {
           selectedTab === "programs" && (
-            <Card className={`shadow-lg ${darkMode ? "bg-slate-800 border-slate-700" : ""}`}>
+            <Card className={`shadow-lg mt-6 ${darkMode ? "bg-slate-800 border-slate-700" : ""}`}>
               <CardHeader className="flex flex-row items-center justify-between gap-4">
                 <div>
                   <h2 className={`text-xl font-semibold ${darkMode ? "text-white" : "text-slate-900"}`}>
@@ -545,91 +611,145 @@ export default function KnowledgeGraphQuery() {
         }
 
         {
-          selectedTab === 'main' && (
-            <Card className={`shadow-lg ${darkMode ? 'bg-slate-800 border-slate-700' : ''}`}>
-              <CardContent className="p-8">
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-3 mb-8">
+          selectedTab === "main" && (
+            <Card className={`shadow-lg mt-6 ${darkMode ? "bg-slate-800 border-slate-700" : ""}`}>
+              <CardHeader>
+                <h2 className={`text-xl font-semibold ${darkMode ? "text-white" : "text-slate-900"}`}>
+                  Find Modules by Relation & Object
+                </h2>
+                <p className={`${darkMode ? "text-slate-300" : "text-slate-600"} text-sm`}>
+                  Choose a module and a relation to view the module's properties.
+                </p>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="subject" className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                      Subject
+                    <Label
+                      htmlFor="module-select"
+                      className={`text-lg font-semibold ${darkMode ? "text-white" : "text-slate-900"}`}
+                    >
+                      Module
                     </Label>
-                    <Input
-                      id="subject"
+
+                    <Select
                       value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      className={`h-12 ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : ''}`}
-                      placeholder="Enter subject..."
-                    />
+                      onValueChange={setSubject}
+                    >
+                      <SelectTrigger
+                        id="subject-select"
+                        className={`h-12 w-full ${darkMode ? "bg-slate-700 border-slate-600 text-white" : ""
+                          }`}
+                      >
+                        <SelectValue
+                          placeholder={"Select a module"}
+                        />
+                      </SelectTrigger>
+                      <SelectContent className={darkMode ? "bg-slate-700 border-slate-600" : ""}>
+                        <SelectContent className={darkMode ? "bg-slate-700 border-slate-600" : ""}>
+                          {subjectModuleDomain
+                            .filter((row) => row.module_name && row.module_name.trim() !== "")
+                            .map((row) => (
+                              <SelectItem key={row.module_name} value={row.module_name}>
+                                {row.module_name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="relation" className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                    <Label
+                      htmlFor="relation-select"
+                      className={`text-lg font-semibold ${darkMode ? "text-white" : "text-slate-900"}`}
+                    >
                       Relation
                     </Label>
-                    <Select value={relation} onValueChange={setRelation}>
-                      <SelectTrigger id="relation" className={`h-12 ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : ''}`}>
+
+                    <Select value={relation} onValueChange={(value) => {
+                      setRelation(value)
+                    }}>
+                      <SelectTrigger
+                        id="relation-select"
+                        className={`h-12 w-full ${darkMode ? "bg-slate-700 border-slate-600 text-white" : ""
+                          }`}
+                      >
                         <SelectValue placeholder="Select relation..." />
                       </SelectTrigger>
-                      <SelectContent className={darkMode ? 'bg-slate-700 border-slate-600' : ''}>
-                        <SelectItem value="offering" className={darkMode ? 'text-white focus:bg-slate-600' : ''}>offering</SelectItem>
-                        <SelectItem value="required" className={darkMode ? 'text-white focus:bg-slate-600' : ''}>required</SelectItem>
+                      <SelectContent className={darkMode ? "bg-slate-700 border-slate-600" : ""}>
+                        {Object.values(RELATION_OPTIONS).map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="object" className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                      Object
-                    </Label>
-                    <Input
-                      id="object"
-                      value={object}
-                      onChange={(e) => setObject(e.target.value)}
-                      className={`h-12 ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : ''}`}
-                      placeholder="Enter object..."
-                    />
-                  </div>
                 </div>
-                <div className="flex justify-center mb-8">
-                  <Button
-                    onClick={handleModuleQuery}
-                    size="lg"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-12 h-12 text-base font-semibold"
-                  >
-                    Run Query
-                  </Button>
-                </div>
-
-                <div className={`rounded-lg border overflow-hidden ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+                <Button
+                  className="w-fit bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={handlePropertyQuery}
+                  disabled={!relation || !subject}
+                >
+                  Show Selected Property
+                </Button>
+                <div
+                  className={`rounded-lg border overflow-hidden ${darkMode ? "border-slate-700" : "border-slate-200"
+                    }`}
+                >
                   <Table>
                     <TableHeader>
-                      <TableRow className={darkMode ? 'bg-slate-700 hover:bg-slate-700 border-slate-600' : 'bg-slate-100 hover:bg-slate-100'}>
-                        <TableHead className={`font-semibold text-base h-14 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                          Subject
+                      <TableRow
+                        className={
+                          darkMode
+                            ? "bg-slate-700 hover:bg-slate-700 border-slate-600"
+                            : "bg-slate-100 hover:bg-slate-100"
+                        }
+                      >
+                        <TableHead
+                          className={`font-semibold text-base h-14 ${darkMode ? "text-white" : "text-slate-900"
+                            }`}
+                        >
+                          Module Name
                         </TableHead>
-                        <TableHead className={`font-semibold text-base h-14 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                          Description
+                        <TableHead
+                          className={`font-semibold text-base h-14 ${darkMode ? "text-white" : "text-slate-900"
+                            }`}
+                        >
+                          Property Values
                         </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {results.length > 0 ? (
                         results.map((row, index) => (
-                          <TableRow key={index} className={`h-16 ${darkMode ? 'border-slate-700' : ''}`}>
-                            <TableCell className={`text-base ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-                              {row.subject}
+                          <TableRow
+                            key={index}
+                            className={`h-16 ${darkMode ? "border-slate-700" : ""}`}
+                          >
+                            <TableCell
+                              className={`text-base ${darkMode ? "text-slate-100" : "text-slate-900"
+                                }`}
+                            >
+                              {subject}
                             </TableCell>
-                            <TableCell className={`text-base ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-                              {row.description}
+                            <TableCell
+                              className={`text-base ${darkMode ? "text-slate-100" : "text-slate-900"
+                                }`}
+                            >
+                              {row.module_property}
                             </TableCell>
                           </TableRow>
                         ))
                       ) : (
-                        <TableRow className={darkMode ? 'border-slate-700' : ''}>
+                        <TableRow className={darkMode ? "border-slate-700" : ""}>
                           <TableCell
                             colSpan={2}
-                            className={`text-center h-32 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}
+                            className={`text-center h-32 ${darkMode ? "text-slate-400" : "text-slate-500"
+                              }`}
                           >
-                            No results yet. Run a query to see results.
+                            No results yet. Choose a relation and object, then run the query.
                           </TableCell>
                         </TableRow>
                       )}
@@ -637,7 +757,8 @@ export default function KnowledgeGraphQuery() {
                   </Table>
                 </div>
               </CardContent>
-            </Card>)
+            </Card>
+          )
         }
       </div >
     </div>
